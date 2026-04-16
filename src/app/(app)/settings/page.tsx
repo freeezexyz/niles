@@ -16,6 +16,9 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
   useEffect(() => {
     async function loadProfile() {
       const supabase = createClient();
@@ -104,6 +107,61 @@ export default function SettingsPage() {
             </Button>
             {saved && (
               <span className="text-sm text-principle-trust">Saved</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Password */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="text-base">Password</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-[var(--text-secondary)]">
+            Set or update your password. If you signed up via magic link or Google, you can set a password here to enable email/password login.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">New Password</Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 6 characters"
+              minLength={6}
+              className="bg-[var(--input)]"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={async () => {
+                if (newPassword.length < 6) {
+                  setPasswordMsg("Password must be at least 6 characters");
+                  return;
+                }
+                setPasswordSaving(true);
+                setPasswordMsg(null);
+                const supabase = createClient();
+                const { error } = await supabase.auth.updateUser({ password: newPassword });
+                if (error) {
+                  setPasswordMsg(error.message);
+                } else {
+                  setPasswordMsg("Password updated");
+                  setNewPassword("");
+                }
+                setPasswordSaving(false);
+              }}
+              disabled={passwordSaving || !newPassword}
+              variant="outline"
+              className="border-border text-[var(--text-secondary)]"
+            >
+              {passwordSaving ? "Updating..." : "Set Password"}
+            </Button>
+            {passwordMsg && (
+              <span className={`text-sm ${passwordMsg === "Password updated" ? "text-principle-trust" : "text-destructive"}`}>
+                {passwordMsg}
+              </span>
             )}
           </div>
         </CardContent>
