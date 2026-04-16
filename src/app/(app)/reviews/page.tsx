@@ -98,7 +98,7 @@ function GenerateButton() {
     <form
       action={async () => {
         "use server";
-        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/cron/weekly-review`);
+        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "https://niles-zeta.vercel.app"}/api/cron/weekly-review`);
       }}
     >
       <Button
