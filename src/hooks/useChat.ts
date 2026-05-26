@@ -59,8 +59,26 @@ export function useChat({
         });
 
         if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || "Failed to send message");
+          const raw = await response.text().catch(() => "");
+          let message = "Failed to send message";
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed?.error) message = parsed.error;
+            } catch {
+              // non-JSON body (HTML error page, empty, etc.) — use status-based fallback
+            }
+          }
+          if (response.status === 504) {
+            message =
+              "Niles took too long to respond. Try a shorter prompt or break it into smaller asks.";
+          } else if (response.status === 502 || response.status === 503) {
+            message =
+              "Niles is temporarily unavailable. Please try again in a moment.";
+          } else if (response.status === 401) {
+            message = "Your session expired. Please sign in again.";
+          }
+          throw new Error(message);
         }
 
         const reader = response.body?.getReader();

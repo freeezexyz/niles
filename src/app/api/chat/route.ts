@@ -46,93 +46,129 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
   }
 
-  // Create or get session
-  let activeSessionId = sessionId;
-  if (!activeSessionId) {
-    const { data: newSession, error: sessionError } = await supabase
-      .from("chat_sessions")
-      .insert({
-        user_id: user.id,
-        deal_id: dealId || null,
-        client_id: clientId || null,
-        session_type: "chat",
-        title: message.slice(0, 80),
-      })
-      .select("id")
-      .single();
-
-    if (sessionError) {
-      return NextResponse.json(
-        { error: "Failed to create session" },
-        { status: 500 }
-      );
-    }
-    activeSessionId = newSession.id;
-  }
-
-  // Save user message
-  await supabase.from("chat_messages").insert({
-    session_id: activeSessionId,
-    role: "user",
-    content: message,
-  });
-
-  // Get RAG context
-  const bookContext = await queryPinecone(message, { topK: 5 });
-
-  // Get client DNA if provided
-  let clientDna = null;
-  if (clientId) {
-    const { data } = await supabase
-      .from("clients")
-      .select("*")
-      .eq("id", clientId)
-      .single();
-    clientDna = data;
-  }
-
-  // Get deal context if provided
-  let dealContext = null;
-  if (dealId) {
-    const { data } = await supabase
-      .from("deals")
-      .select("*")
-      .eq("id", dealId)
-      .single();
-    dealContext = data;
-  }
-
-  // Build system prompt
-  const systemPrompt = buildChatCoachPrompt({
-    bookContext,
-    clientDna,
-    dealContext,
-  });
-
-  // Get conversation history
-  const { data: history } = await supabase
-    .from("chat_messages")
-    .select("role, content")
-    .eq("session_id", activeSessionId)
-    .order("created_at", { ascending: true })
-    .limit(20);
-
-  const chatMessages = (history || [])
-    .filter((m) => m.role !== "system")
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
-
-  // Stream Anthropic response using async iteration
-  const anthropic = getAnthropicClient();
   const encoder = new TextEncoder();
 
   const readable = new ReadableStream({
     async start(controller) {
-      let fullContent = "";
+      const send = (payload: object) => {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
+        );
+      };
 
       try {
+        // Create or get session
+        let activeSessionId = sessionId;
+        if (!activeSessionId) {
+          const { data: newSession, error: sessionError } = await supabase
+            .from("chat_sessions")
+            .insert({
+              user_id: user.id,
+              deal_id: dealId || null,
+              client_id: clientId || null,
+              session_type: "chat",
+              title: message.slice(0, 80),
+            })
+            .select("id")
+            .single();
+
+          if (sessionError || !newSession) {
+            send({ type: "error", error: "Failed to create session" });
+            return;
+          }
+          activeSessionId = newSession.id;
+        }
+
+        // Save user message
+        await supabase.from("chat_messages").insert({
+          session_id: activeSessionId,
+          role: "user",
+          content: message,
+        });
+
+        // Short-circuit: Niles has no browsing tool, so URLs can't be fetched.
+        // Without this, the model burns the timeout budget hallucinating from the URL slug.
+        const urlPattern = /(https?:\/\/|www\.)\S+/i;
+        if (urlPattern.test(message)) {
+          const cannedResponse =
+            "I can't open links directly — I don't have web access in this chat. To help you write copy, paste the key details here: the person's headline, current role, the kind of work they do, recent posts that stood out, and the audience you're writing for. Once I have that, I can draft something tight.";
+
+          send({ type: "text", content: cannedResponse });
+          send({
+            type: "done",
+            sessionId: activeSessionId,
+            principleTag: null,
+            chapterRef: null,
+          });
+
+          await supabase.from("chat_messages").insert({
+            session_id: activeSessionId,
+            role: "assistant",
+            content: cannedResponse,
+            principle_tag: null,
+            chapter_ref: null,
+            metadata: { canned: "url_not_supported" },
+          });
+
+          await supabase
+            .from("profiles")
+            .update({ query_count: profile.query_count + 1 })
+            .eq("id", user.id);
+
+          return;
+        }
+
+        // Get RAG context
+        const bookContext = await queryPinecone(message, { topK: 5 });
+
+        // Get client DNA if provided
+        let clientDna = null;
+        if (clientId) {
+          const { data } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("id", clientId)
+            .single();
+          clientDna = data;
+        }
+
+        // Get deal context if provided
+        let dealContext = null;
+        if (dealId) {
+          const { data } = await supabase
+            .from("deals")
+            .select("*")
+            .eq("id", dealId)
+            .single();
+          dealContext = data;
+        }
+
+        // Build system prompt
+        const systemPrompt = buildChatCoachPrompt({
+          bookContext,
+          clientDna,
+          dealContext,
+        });
+
+        // Get conversation history
+        const { data: history } = await supabase
+          .from("chat_messages")
+          .select("role, content")
+          .eq("session_id", activeSessionId)
+          .order("created_at", { ascending: true })
+          .limit(20);
+
+        const chatMessages = (history || [])
+          .filter((m) => m.role !== "system")
+          .map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          }));
+
+        // Stream Anthropic response using async iteration
+        const anthropic = getAnthropicClient();
+        let fullContent = "";
+
         const stream = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
           max_tokens: 4096,
@@ -148,11 +184,7 @@ export async function POST(req: Request) {
           ) {
             const text = event.delta.text;
             fullContent += text;
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({ type: "text", content: text })}\n\n`
-              )
-            );
+            send({ type: "text", content: text });
           }
         }
 
@@ -169,16 +201,12 @@ export async function POST(req: Request) {
         }
 
         // Send done event with metadata
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({
-              type: "done",
-              sessionId: activeSessionId,
-              principleTag,
-              chapterRef,
-            })}\n\n`
-          )
-        );
+        send({
+          type: "done",
+          sessionId: activeSessionId,
+          principleTag,
+          chapterRef,
+        });
 
         // Save assistant message to DB
         await supabase.from("chat_messages").insert({
@@ -222,14 +250,7 @@ export async function POST(req: Request) {
         }
       } catch (error) {
         console.error("Chat API error:", error);
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({
-              type: "error",
-              error: "Failed to generate response",
-            })}\n\n`
-          )
-        );
+        send({ type: "error", error: "Failed to generate response" });
       } finally {
         controller.close();
       }
