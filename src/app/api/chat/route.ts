@@ -8,6 +8,8 @@ import type { PrincipleKey } from "@/lib/utils/principles";
 import type { TierKey } from "@/lib/utils/tiers";
 
 export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -55,6 +57,10 @@ export async function POST(req: Request) {
           encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
         );
       };
+
+      // Flush headers immediately so Vercel/proxies don't buffer the response
+      // while pre-Anthropic work (Pinecone, DB queries) is in flight.
+      controller.enqueue(encoder.encode(": ready\n\n"));
 
       try {
         // Create or get session
@@ -260,8 +266,9 @@ export async function POST(req: Request) {
   return new Response(readable, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }
