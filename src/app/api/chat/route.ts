@@ -256,7 +256,12 @@ export async function POST(req: Request) {
         }
       } catch (error) {
         console.error("Chat API error:", error);
-        send({ type: "error", error: "Failed to generate response" });
+        const detail =
+          error instanceof Error ? error.message : String(error);
+        send({
+          type: "error",
+          error: `Failed to generate response: ${detail}`,
+        });
       } finally {
         controller.close();
       }

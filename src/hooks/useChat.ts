@@ -98,51 +98,67 @@ export function useChat({
             if (!line.startsWith("data: ")) continue;
             const jsonStr = line.slice(6);
 
+            let data: {
+              type: string;
+              content?: string;
+              error?: string;
+              sessionId?: string;
+              principleTag?: PrincipleKey | null;
+              chapterRef?: string | null;
+            };
             try {
-              const data = JSON.parse(jsonStr);
-
-              if (data.type === "text") {
-                fullContent += data.content;
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantId
-                      ? { ...msg, content: fullContent }
-                      : msg
-                  )
-                );
-              } else if (data.type === "done") {
-                // Remove the principle tag from displayed content
-                let cleanContent = fullContent;
-                const tagMatch = cleanContent.match(
-                  /\[PRINCIPLE:\s*\w+\s*\|\s*CH\.\d+\]/i
-                );
-                if (tagMatch) {
-                  cleanContent = cleanContent.replace(tagMatch[0], "").trim();
-                }
-
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantId
-                      ? {
-                          ...msg,
-                          content: cleanContent,
-                          principleTag: data.principleTag as PrincipleKey,
-                        }
-                      : msg
-                  )
-                );
-
-                if (data.sessionId && !currentSessionId) {
-                  setCurrentSessionId(data.sessionId);
-                  onSessionCreated?.(data.sessionId);
-                }
-              } else if (data.type === "error") {
-                throw new Error(data.error);
-              }
+              data = JSON.parse(jsonStr);
             } catch {
-              // Skip malformed JSON lines
+              continue; // Skip malformed JSON lines
+            }
+
+            if (data.type === "text") {
+              fullContent += data.content ?? "";
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId
+                    ? { ...msg, content: fullContent }
+                    : msg
+                )
+              );
+            } else if (data.type === "done") {
+              // Remove the principle tag from displayed content
+              let cleanContent = fullContent;
+              const tagMatch = cleanContent.match(
+                /\[PRINCIPLE:\s*\w+\s*\|\s*CH\.\d+\]/i
+              );
+              if (tagMatch) {
+                cleanContent = cleanContent.replace(tagMatch[0], "").trim();
+              }
+
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId
+                    ? {
+                        ...msg,
+                        content: cleanContent,
+                        principleTag: data.principleTag as PrincipleKey,
+                      }
+                    : msg
+                )
+              );
+
+              if (data.sessionId && !currentSessionId) {
+                setCurrentSessionId(data.sessionId);
+                onSessionCreated?.(data.sessionId);
+              }
+            } else if (data.type === "error") {
+              throw new Error(data.error || "Server error");
             }
           }
+        }
+
+        // Stream ended with no content and no done event — surface as error
+        // so the empty placeholder bubble doesn't sit there forever.
+        if (!fullContent) {
+          throw new Error(
+            "Niles didn't respond. The stream closed before any content arrived."
+          );
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
