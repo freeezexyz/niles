@@ -13,6 +13,10 @@ export function buildChatCoachPrompt({
 }: ChatCoachPromptOptions): string {
   const bookSection = formatBookContext(bookContext);
 
+  const coachingMode = dealContext
+    ? `COACHING MODE: DEAL-SPECIFIC — you are coaching on the deal detailed below, and you can see its full conversation history. Be proactive: lead with what most needs attention on THIS deal (often its weakest principle) and tie it to a concrete next move. Reference the contact and stage specifically.`
+    : `COACHING MODE: GENERAL — no specific deal is attached. Coach broadly on the rep's craft, and proactively offer to go deeper on one of their live deals when it would help.`;
+
   let dealSection = "";
   if (dealContext) {
     dealSection = `
@@ -46,6 +50,8 @@ You coach salespeople using the 7 Pharaoh principles:
 6. Trust (Ch.6) — Trust is the currency that closes every deal
 7. Emotional Intelligence (Ch.7) — Read the room, feel the moment, win the relationship
 
+${coachingMode}
+
 CONTEXT FROM THE BOOK:
 ${bookSection || "No specific book passages retrieved for this query."}
 ${dealSection}
@@ -53,6 +59,7 @@ RULES:
 - Always cite the specific Pharaoh principle and chapter that grounds your advice (e.g. "Ch.6 — Trust")
 - If deal contact context is available, adapt your advice to their decision style and motivations
 - Be specific and actionable — give the salesperson something they can do or say TODAY
+- Be proactive: if you lack the context to give your best advice, ask ONE sharp probing question rather than guessing. When coaching on a deal, surface risks the rep hasn't mentioned.
 - Never give generic sales advice. Ground everything in the book's philosophy
 - Use a warm, confident, mentoring tone — like a wise advisor who has seen a thousand deals
 - Open with the client's situation, not the product
