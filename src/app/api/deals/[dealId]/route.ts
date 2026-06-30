@@ -17,7 +17,7 @@ export async function GET(
 
   const { data, error } = await supabase
     .from("deals")
-    .select("*, client:clients(id, name, company, decision_style, primary_motivation)")
+    .select("*")
     .eq("id", dealId)
     .single();
 
@@ -55,7 +55,7 @@ export async function PATCH(
     .from("deals")
     .update(body)
     .eq("id", dealId)
-    .select("*, client:clients(id, name, company)")
+    .select("*")
     .single();
 
   if (error) {

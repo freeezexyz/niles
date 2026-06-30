@@ -15,24 +15,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { intent, additionalContext, clientId, dealId } = await req.json();
+  const { intent, additionalContext, dealId } = await req.json();
 
   if (!intent?.trim()) {
     return NextResponse.json({ error: "Email intent is required" }, { status: 400 });
   }
 
-  let client = null;
   let deal = null;
-  if (clientId) {
-    const { data } = await supabase.from("clients").select("*").eq("id", clientId).single();
-    client = data;
-  }
   if (dealId) {
     const { data } = await supabase.from("deals").select("*").eq("id", dealId).single();
     deal = data;
   }
 
-  const prompt = buildEmailDraftPrompt({ intent, additionalContext, client, deal });
+  const prompt = buildEmailDraftPrompt({ intent, additionalContext, deal });
   const anthropic = getAnthropicClient();
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -48,7 +43,6 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       deal_id: dealId || null,
-      client_id: clientId || null,
       session_type: "email_draft",
       title: `Email: ${intent.slice(0, 60)}`,
     })

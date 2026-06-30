@@ -15,9 +15,8 @@ import type { Deal, DealActivity } from "@/lib/types";
 
 const stageLabels: Record<string, string> = {
   prospecting: "Prospecting",
-  vision_aligned: "Vision Aligned",
-  trust_building: "Trust Building",
-  leadership_phase: "Leadership Phase",
+  solution_presentation: "Solution Presentation",
+  proposal_submission: "Proposal Submission",
   closing: "Closing",
   won: "Won",
   lost: "Lost",
@@ -37,7 +36,7 @@ export default function DealDetailPage({
     const supabase = createClient();
     const { data } = await supabase
       .from("deals")
-      .select("*, client:clients(id, name, company)")
+      .select("*")
       .eq("id", dealId)
       .single();
     setDeal(data);
@@ -105,13 +104,11 @@ export default function DealDetailPage({
                 {deal.currency} {Number(deal.value).toLocaleString()}
               </span>
             )}
-            {deal.client && (
-              <Link
-                href={`/clients/${deal.client.id}`}
-                className="text-sm text-gold-500 hover:text-gold-400"
-              >
-                {deal.client.name}
-              </Link>
+            {deal.contact_name && (
+              <span className="text-sm text-[var(--text-secondary)]">
+                {deal.contact_name}
+                {deal.contact_company && ` — ${deal.contact_company}`}
+              </span>
             )}
           </div>
         </div>

@@ -1,17 +1,17 @@
-import type { Client } from "@/lib/types";
+import type { Deal } from "@/lib/types";
 import type { BookChunk } from "@/lib/pinecone/query";
 import { formatBookContext } from "@/lib/pinecone/query";
 
 interface ObjectionPromptOptions {
   objection: string;
   bookContext: BookChunk[];
-  client?: Client | null;
+  deal?: Deal | null;
 }
 
 export function buildObjectionHandlerPrompt({
   objection,
   bookContext,
-  client,
+  deal,
 }: ObjectionPromptOptions): string {
   const bookSection = formatBookContext(bookContext);
 
@@ -21,11 +21,13 @@ A salesperson has received the following objection from a client:
 
 OBJECTION: "${objection}"
 
-${client ? `CLIENT DNA:
-- Name: ${client.name}
-- Decision Style: ${client.decision_style || "Unknown"}
-- Primary Motivation: ${client.primary_motivation?.replace(/_/g, " ") || "Unknown"}
-- Communication Preference: ${client.communication_pref?.replace(/_/g, " ") || "Unknown"}` : ""}
+${deal ? `DEAL CONTACT:
+- Name: ${deal.contact_name || "Unknown"}${deal.contact_company ? ` (${deal.contact_company})` : ""}
+- Role: ${deal.contact_role || "Unknown"}
+- Decision Style: ${deal.decision_style || "Unknown"}
+- Primary Motivation: ${deal.primary_motivation?.replace(/_/g, " ") || "Unknown"}
+- Communication Preference: ${deal.communication_pref?.replace(/_/g, " ") || "Unknown"}
+- Key Concerns: ${deal.key_concerns || "Not provided"}` : ""}
 
 CONTEXT FROM THE BOOK:
 ${bookSection}

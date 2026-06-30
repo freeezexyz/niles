@@ -38,14 +38,23 @@ CREATE TABLE public.profiles (
 ALTER TABLE public.teams
   ADD CONSTRAINT teams_owner_fk FOREIGN KEY (owner_id) REFERENCES public.profiles(id);
 
--- ── CLIENTS ──
+-- ── DEALS ──
 
-CREATE TABLE public.clients (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id             UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  name                TEXT NOT NULL,
-  company             TEXT,
-  role_title          TEXT,
+CREATE TABLE public.deals (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title           TEXT NOT NULL,
+  value           DECIMAL(14,2),
+  currency        TEXT DEFAULT 'USD',
+  stage           TEXT NOT NULL DEFAULT 'prospecting'
+                  CHECK (stage IN (
+                    'prospecting', 'solution_presentation',
+                    'proposal_submission', 'closing', 'won', 'lost'
+                  )),
+  -- Contact the deal pegs to (folded in from the former clients table)
+  contact_name        TEXT,
+  contact_company     TEXT,
+  contact_role        TEXT,
   industry            TEXT,
   decision_style      TEXT CHECK (decision_style IN (
                         'analytical', 'driver', 'amiable', 'expressive')),
@@ -56,32 +65,6 @@ CREATE TABLE public.clients (
                         'data_reports', 'visual', 'verbal', 'written')),
   key_concerns        TEXT,
   emotional_triggers  TEXT,
-  dna_profile         JSONB,
-  p_purpose           INT DEFAULT 0,
-  p_visioning         INT DEFAULT 0,
-  p_knowledge         INT DEFAULT 0,
-  p_kindness          INT DEFAULT 0,
-  p_leadership        INT DEFAULT 0,
-  p_trust             INT DEFAULT 0,
-  p_emotional_intel   INT DEFAULT 0,
-  created_at          TIMESTAMPTZ DEFAULT now(),
-  updated_at          TIMESTAMPTZ DEFAULT now()
-);
-
--- ── DEALS ──
-
-CREATE TABLE public.deals (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  client_id       UUID REFERENCES public.clients(id) ON DELETE SET NULL,
-  title           TEXT NOT NULL,
-  value           DECIMAL(14,2),
-  currency        TEXT DEFAULT 'USD',
-  stage           TEXT NOT NULL DEFAULT 'prospecting'
-                  CHECK (stage IN (
-                    'prospecting', 'vision_aligned', 'trust_building',
-                    'leadership_phase', 'closing', 'won', 'lost'
-                  )),
   health_purpose          INT DEFAULT 50,
   health_visioning        INT DEFAULT 50,
   health_knowledge        INT DEFAULT 50,
@@ -100,13 +83,35 @@ CREATE TABLE public.deals (
   updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- ── REP PRINCIPLE SCORES (time-series rep development) ──
+-- One row per snapshot. The salesperson's own growth across the 7 Pharaoh
+-- principles. Latest row = "today's score"; the full series = the trend.
+
+CREATE TABLE public.rep_principle_scores (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  p_purpose           INT NOT NULL DEFAULT 50,
+  p_visioning         INT NOT NULL DEFAULT 50,
+  p_knowledge         INT NOT NULL DEFAULT 50,
+  p_kindness          INT NOT NULL DEFAULT 50,
+  p_leadership        INT NOT NULL DEFAULT 50,
+  p_trust             INT NOT NULL DEFAULT 50,
+  p_emotional_intel   INT NOT NULL DEFAULT 50,
+  source              TEXT NOT NULL DEFAULT 'chat'
+                      CHECK (source IN (
+                        'baseline', 'chat', 'manual', 'periodic',
+                        'roleplay', 'debrief'
+                      )),
+  note                TEXT,
+  created_at          TIMESTAMPTZ DEFAULT now()
+);
+
 -- ── CHAT SESSIONS ──
 
 CREATE TABLE public.chat_sessions (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   deal_id         UUID REFERENCES public.deals(id) ON DELETE SET NULL,
-  client_id       UUID REFERENCES public.clients(id) ON DELETE SET NULL,
   session_type    TEXT NOT NULL DEFAULT 'chat'
                   CHECK (session_type IN (
                     'chat', 'objection', 'roleplay',
@@ -194,9 +199,10 @@ CREATE TABLE public.deal_activities (
 -- INDEXES
 -- ═══════════════════════════════════════════════════════════
 
-CREATE INDEX idx_clients_user ON public.clients(user_id);
 CREATE INDEX idx_deals_user ON public.deals(user_id);
 CREATE INDEX idx_deals_stage ON public.deals(stage);
+CREATE INDEX idx_rep_scores_user_created
+  ON public.rep_principle_scores(user_id, created_at DESC);
 CREATE INDEX idx_chat_sessions_user ON public.chat_sessions(user_id);
 CREATE INDEX idx_chat_messages_session ON public.chat_messages(session_id);
 CREATE INDEX idx_todos_user_date ON public.todos(user_id, due_date);
@@ -223,21 +229,10 @@ CREATE POLICY "Team members can view their team"
 CREATE POLICY "Team owners can update their team"
   ON public.teams FOR UPDATE USING (owner_id = auth.uid());
 
--- Clients
-ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users see own clients"
-  ON public.clients FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Team leads see team clients"
-  ON public.clients FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid()
-        AND p.role IN ('team_lead', 'admin')
-        AND p.team_id = (
-          SELECT team_id FROM public.profiles WHERE id = clients.user_id
-        )
-    )
-  );
+-- Rep principle scores
+ALTER TABLE public.rep_principle_scores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users see own rep scores"
+  ON public.rep_principle_scores FOR ALL USING (auth.uid() = user_id);
 
 -- Deals
 ALTER TABLE public.deals ENABLE ROW LEVEL SECURITY;
@@ -314,6 +309,11 @@ BEGIN
     NEW.email,
     NEW.raw_user_meta_data->>'avatar_url'
   );
+
+  -- Seed a baseline development snapshot so the rep radar renders from day one.
+  INSERT INTO public.rep_principle_scores (user_id, source, note)
+  VALUES (NEW.id, 'baseline', 'Starting baseline');
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -335,8 +335,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.profiles
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.clients
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.deals
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();

@@ -28,7 +28,7 @@ export interface Team {
   created_at: string;
 }
 
-// ── Clients ──
+// ── Contact attributes (a deal pegs to a person) ──
 
 export type DecisionStyle =
   | "analytical"
@@ -50,37 +50,12 @@ export type CommunicationPref =
   | "verbal"
   | "written";
 
-export interface Client {
-  id: string;
-  user_id: string;
-  name: string;
-  company: string | null;
-  role_title: string | null;
-  industry: string | null;
-  decision_style: DecisionStyle | null;
-  primary_motivation: PrimaryMotivation | null;
-  communication_pref: CommunicationPref | null;
-  key_concerns: string | null;
-  emotional_triggers: string | null;
-  dna_profile: Record<string, unknown> | null;
-  p_purpose: number;
-  p_visioning: number;
-  p_knowledge: number;
-  p_kindness: number;
-  p_leadership: number;
-  p_trust: number;
-  p_emotional_intel: number;
-  created_at: string;
-  updated_at: string;
-}
-
 // ── Deals ──
 
 export type DealStage =
   | "prospecting"
-  | "vision_aligned"
-  | "trust_building"
-  | "leadership_phase"
+  | "solution_presentation"
+  | "proposal_submission"
   | "closing"
   | "won"
   | "lost";
@@ -88,11 +63,20 @@ export type DealStage =
 export interface Deal {
   id: string;
   user_id: string;
-  client_id: string | null;
   title: string;
   value: number | null;
   currency: string;
   stage: DealStage;
+  // Contact the deal pegs to (folded in from the former clients table)
+  contact_name: string | null;
+  contact_company: string | null;
+  contact_role: string | null;
+  industry: string | null;
+  decision_style: DecisionStyle | null;
+  primary_motivation: PrimaryMotivation | null;
+  communication_pref: CommunicationPref | null;
+  key_concerns: string | null;
+  emotional_triggers: string | null;
   health_purpose: number;
   health_visioning: number;
   health_knowledge: number;
@@ -105,8 +89,31 @@ export interface Deal {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
-  // Joined
-  client?: Client;
+}
+
+// ── Rep development (time-series principle scores) ──
+
+export type RepScoreSource =
+  | "baseline"
+  | "chat"
+  | "manual"
+  | "periodic"
+  | "roleplay"
+  | "debrief";
+
+export interface RepPrincipleScore {
+  id: string;
+  user_id: string;
+  p_purpose: number;
+  p_visioning: number;
+  p_knowledge: number;
+  p_kindness: number;
+  p_leadership: number;
+  p_trust: number;
+  p_emotional_intel: number;
+  source: RepScoreSource;
+  note: string | null;
+  created_at: string;
 }
 
 // ── Chat ──
@@ -123,7 +130,6 @@ export interface ChatSession {
   id: string;
   user_id: string;
   deal_id: string | null;
-  client_id: string | null;
   session_type: SessionType;
   title: string | null;
   principle_tags: string[] | null;

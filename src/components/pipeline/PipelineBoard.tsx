@@ -30,9 +30,8 @@ import type { Deal, DealStage } from "@/lib/types";
 
 const STAGES: { id: DealStage; title: string; emoji: string }[] = [
   { id: "prospecting", title: "Prospecting", emoji: "\u{1F31F}" },
-  { id: "vision_aligned", title: "Vision Aligned", emoji: "\u{1F441}\u{FE0F}" },
-  { id: "trust_building", title: "Trust Building", emoji: "\u{1F91D}" },
-  { id: "leadership_phase", title: "Leadership Phase", emoji: "\u{1F451}" },
+  { id: "solution_presentation", title: "Solution Presentation", emoji: "\u{1F4A1}" },
+  { id: "proposal_submission", title: "Proposal Submission", emoji: "\u{1F4DD}" },
   { id: "closing", title: "Closing", emoji: "\u{26A1}" },
 ];
 
@@ -60,7 +59,7 @@ export function PipelineBoard() {
 
     const { data } = await supabase
       .from("deals")
-      .select("*, client:clients(id, name, company)")
+      .select("*")
       .eq("user_id", user.id)
       .in("stage", STAGES.map((s) => s.id))
       .order("updated_at", { ascending: false });
