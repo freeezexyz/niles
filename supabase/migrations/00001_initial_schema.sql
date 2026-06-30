@@ -188,9 +188,32 @@ CREATE TABLE public.deal_activities (
   activity_type   TEXT NOT NULL CHECK (activity_type IN (
                     'stage_change', 'health_update', 'note', 'chat_session',
                     'pre_meeting', 'debrief', 'email_sent', 'objection_handled',
-                    'roleplay_completed', 'score_change'
+                    'roleplay_completed', 'score_change',
+                    'proposal_generated', 'deck_generated'
                   )),
   description     TEXT,
+  metadata        JSONB,
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- ── DEAL OUTPUTS ──
+-- Generated artifacts (proposal, deck) produced from a deal's saved
+-- conversations + book grounding. Stored separately from chat_messages
+-- because they are large, retrievable, downloadable deliverables.
+
+CREATE TABLE public.deal_outputs (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id         UUID NOT NULL REFERENCES public.deals(id) ON DELETE CASCADE,
+  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  output_type     TEXT NOT NULL CHECK (output_type IN (
+                    'proposal', 'deck_html', 'deck_llm'
+                  )),
+  -- Render format of `content`: markdown body, a self-contained HTML
+  -- document, or a plain-text copy-for-LLM block.
+  format          TEXT NOT NULL DEFAULT 'markdown'
+                  CHECK (format IN ('markdown', 'html', 'text')),
+  title           TEXT,
+  content         TEXT NOT NULL,
   metadata        JSONB,
   created_at      TIMESTAMPTZ DEFAULT now()
 );
@@ -207,6 +230,8 @@ CREATE INDEX idx_chat_sessions_user ON public.chat_sessions(user_id);
 CREATE INDEX idx_chat_messages_session ON public.chat_messages(session_id);
 CREATE INDEX idx_todos_user_date ON public.todos(user_id, due_date);
 CREATE INDEX idx_deal_activities_deal ON public.deal_activities(deal_id);
+CREATE INDEX idx_deal_outputs_deal_created
+  ON public.deal_outputs(deal_id, created_at DESC);
 CREATE INDEX idx_weekly_reviews_user ON public.weekly_reviews(user_id, week_start);
 
 -- ═══════════════════════════════════════════════════════════
@@ -268,6 +293,11 @@ CREATE POLICY "Users see own chat messages"
 ALTER TABLE public.todos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users see own todos"
   ON public.todos FOR ALL USING (auth.uid() = user_id);
+
+-- Deal Outputs
+ALTER TABLE public.deal_outputs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users see own deal outputs"
+  ON public.deal_outputs FOR ALL USING (auth.uid() = user_id);
 
 -- Calendar Events
 ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;

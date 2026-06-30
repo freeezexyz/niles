@@ -149,6 +149,24 @@ export interface ChatMessage {
   created_at: string;
 }
 
+// ── Deal Outputs (generated artifacts: proposal, deck) ──
+
+export type OutputType = "proposal" | "deck_html" | "deck_llm";
+
+export type OutputFormat = "markdown" | "html" | "text";
+
+export interface DealOutput {
+  id: string;
+  deal_id: string;
+  user_id: string;
+  output_type: OutputType;
+  format: OutputFormat;
+  title: string | null;
+  content: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
 // ── Todos ──
 
 export type TodoPriority = "high" | "medium" | "low" | "grow";
@@ -213,7 +231,9 @@ export type ActivityType =
   | "email_sent"
   | "objection_handled"
   | "roleplay_completed"
-  | "score_change";
+  | "score_change"
+  | "proposal_generated"
+  | "deck_generated";
 
 export interface DealActivity {
   id: string;

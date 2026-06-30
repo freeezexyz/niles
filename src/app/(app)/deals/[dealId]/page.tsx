@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { RadarChart } from "@/components/deals/RadarChart";
 import { HealthAlert } from "@/components/deals/HealthAlert";
 import { DealActivityLog } from "@/components/deals/DealActivityLog";
+import { DealOutputs } from "@/components/deals/DealOutputs";
 import { HealthBar } from "@/components/shared/HealthBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -211,6 +212,9 @@ export default function DealDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Generated Outputs (proposal + deck) */}
+      <DealOutputs dealId={dealId} onChange={loadActivities} />
 
       {/* Activity Log */}
       <Card className="border-border bg-card">
