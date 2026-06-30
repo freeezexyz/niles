@@ -42,3 +42,7 @@ next-env.d.ts
 
 # local reference notes (not for commit)
 NOTES-*.md
+
+# private meeting transcripts / recordings
+docs/*transcript*
+docs/*.txt
