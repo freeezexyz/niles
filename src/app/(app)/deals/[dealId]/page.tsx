@@ -152,7 +152,18 @@ export default function DealDetailPage({
             </span>
           </CardHeader>
           <CardContent>
-            <RadarChart deal={deal} />
+            <RadarChart
+              label="Health"
+              scores={{
+                purpose: deal.health_purpose,
+                visioning: deal.health_visioning,
+                knowledge: deal.health_knowledge,
+                kindness: deal.health_kindness,
+                leadership: deal.health_leadership,
+                trust: deal.health_trust,
+                emotional: deal.health_emotional_intel,
+              }}
+            />
           </CardContent>
         </Card>
 
