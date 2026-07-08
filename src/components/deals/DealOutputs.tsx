@@ -15,6 +15,7 @@ import {
   FileText,
   Presentation,
   ClipboardList,
+  Compass,
   Eye,
   Copy,
   Download,
@@ -24,16 +25,21 @@ import {
 } from "lucide-react";
 import type { DealOutput, OutputType } from "@/lib/types";
 
-type GenKind = "proposal" | "deck_html" | "deck_llm";
+type GenKind = "action_diagram" | "proposal" | "deck_html" | "deck_llm";
 
 const TYPE_META: Record<
   OutputType,
   { label: string; icon: typeof FileText; ext: string; mime: string }
 > = {
+  action_diagram: { label: "Action Plan", icon: Compass, ext: "html", mime: "text/html" },
   proposal: { label: "Proposal", icon: FileText, ext: "md", mime: "text/markdown" },
   deck_html: { label: "HTML Deck", icon: Presentation, ext: "html", mime: "text/html" },
   deck_llm: { label: "Deck Outline", icon: ClipboardList, ext: "txt", mime: "text/plain" },
 };
+
+// Output types that render as a full HTML artifact — opened in a new tab rather
+// than shown as source in the <pre> viewer.
+const HTML_KINDS: OutputType[] = ["action_diagram", "deck_html"];
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "output";
@@ -71,11 +77,13 @@ export function DealOutputs({
     setError(null);
     try {
       const endpoint =
-        kind === "proposal"
+        kind === "action_diagram"
+          ? `/api/deals/${dealId}/action-diagram`
+          : kind === "proposal"
           ? `/api/deals/${dealId}/proposal`
           : `/api/deals/${dealId}/deck`;
       const body =
-        kind === "proposal"
+        kind === "proposal" || kind === "action_diagram"
           ? {}
           : { format: kind === "deck_html" ? "html" : "llm" };
       const res = await fetch(endpoint, {
@@ -90,10 +98,14 @@ export function DealOutputs({
       }
       await loadOutputs();
       onChange?.();
-      // Auto-open the viewer for text artifacts; an HTML deck renders better via
-      // its "Open deck" action than as raw source in a <pre>.
-      if (json.output && json.output.output_type !== "deck_html") {
-        setViewing(json.output);
+      // Full HTML artifacts (action plan, deck) render best in their own tab;
+      // text artifacts open in the <pre> viewer.
+      if (json.output) {
+        if (HTML_KINDS.includes(json.output.output_type)) {
+          openHtml(json.output);
+        } else {
+          setViewing(json.output);
+        }
       }
     } catch {
       setError("Could not reach the generator. Please try again.");
@@ -137,6 +149,14 @@ export function DealOutputs({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
+          <GenButton
+            label="Action Plan"
+            icon={Compass}
+            primary
+            busy={generating === "action_diagram"}
+            disabled={generating !== null}
+            onClick={() => generate("action_diagram")}
+          />
           <GenButton
             label="Proposal"
             icon={FileText}
@@ -196,8 +216,8 @@ export function DealOutputs({
                     {meta.label}
                   </Badge>
                   <div className="flex gap-1">
-                    {output.output_type === "deck_html" ? (
-                      <IconBtn title="Open deck" onClick={() => openHtml(output)}>
+                    {HTML_KINDS.includes(output.output_type) ? (
+                      <IconBtn title="Open" onClick={() => openHtml(output)}>
                         <ExternalLink className="h-3.5 w-3.5" />
                       </IconBtn>
                     ) : (
@@ -253,20 +273,27 @@ function GenButton({
   busy,
   disabled,
   onClick,
+  primary = false,
 }: {
   label: string;
   icon: typeof FileText;
   busy: boolean;
   disabled: boolean;
   onClick: () => void;
+  /** The hero / free deliverable — rendered filled to stand out. */
+  primary?: boolean;
 }) {
   return (
     <Button
-      variant="outline"
+      variant={primary ? "default" : "outline"}
       size="sm"
       onClick={onClick}
       disabled={disabled}
-      className="gap-2 border-gold-500/30 text-gold-400"
+      className={
+        primary
+          ? "gap-2 bg-gold-500 text-background hover:bg-gold-400"
+          : "gap-2 border-gold-500/30 text-gold-400"
+      }
     >
       {busy ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />

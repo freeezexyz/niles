@@ -151,7 +151,11 @@ export interface ChatMessage {
 
 // ── Deal Outputs (generated artifacts: proposal, deck) ──
 
-export type OutputType = "proposal" | "deck_html" | "deck_llm";
+export type OutputType =
+  | "proposal"
+  | "deck_html"
+  | "deck_llm"
+  | "action_diagram";
 
 export type OutputFormat = "markdown" | "html" | "text";
 
@@ -233,7 +237,8 @@ export type ActivityType =
   | "roleplay_completed"
   | "score_change"
   | "proposal_generated"
-  | "deck_generated";
+  | "deck_generated"
+  | "action_diagram_generated";
 
 export interface DealActivity {
   id: string;

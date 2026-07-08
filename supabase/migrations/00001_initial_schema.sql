@@ -189,7 +189,8 @@ CREATE TABLE public.deal_activities (
                     'stage_change', 'health_update', 'note', 'chat_session',
                     'pre_meeting', 'debrief', 'email_sent', 'objection_handled',
                     'roleplay_completed', 'score_change',
-                    'proposal_generated', 'deck_generated'
+                    'proposal_generated', 'deck_generated',
+                    'action_diagram_generated'
                   )),
   description     TEXT,
   metadata        JSONB,
@@ -206,7 +207,7 @@ CREATE TABLE public.deal_outputs (
   deal_id         UUID NOT NULL REFERENCES public.deals(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   output_type     TEXT NOT NULL CHECK (output_type IN (
-                    'proposal', 'deck_html', 'deck_llm'
+                    'proposal', 'deck_html', 'deck_llm', 'action_diagram'
                   )),
   -- Render format of `content`: markdown body, a self-contained HTML
   -- document, or a plain-text copy-for-LLM block.
