@@ -5,7 +5,7 @@
 INSERT INTO public.deal_outputs (deal_id, user_id, output_type, format, title, content)
 VALUES (
   '53a664f3-2023-47b3-b327-f9fc3c1c94a7',
-  'd4e78b49-0aaa-45ee-a3a4-a4d22b89136b',
+  (SELECT id FROM auth.users WHERE email = 'test@niles.local'),
   'action_diagram',
   'html',
   'Action Plan — Toyota Malaysia',
@@ -233,7 +233,7 @@ VALUES (
 INSERT INTO public.deal_activities (deal_id, user_id, activity_type, description)
 VALUES (
   '53a664f3-2023-47b3-b327-f9fc3c1c94a7',
-  'd4e78b49-0aaa-45ee-a3a4-a4d22b89136b',
+  (SELECT id FROM auth.users WHERE email = 'test@niles.local'),
   'action_diagram_generated',
   'Action plan generated for Richard Tan'
 );

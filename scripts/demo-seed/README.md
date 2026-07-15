@@ -6,6 +6,8 @@ every seedable product page shows content instead of empty states. Authored
 
 ## Files
 
+- `00-base-deals.sql` — **run first.** Creates the three deals the other scripts
+  reference by fixed UUID (Toyota, Petronas, Grab). See the reconstruction note below.
 - `demo-action-plan.sql` — inserts the showcase **Action Plan** artifact
   (`deal_outputs.output_type = 'action_diagram'`, a self-contained HTML "Deal
   Strategy Map") onto the Toyota deal, plus its activity row.
@@ -23,28 +25,33 @@ nothing from the DB, so output can't be seeded): **objection, prep/new,
 debrief/new, email/draft, roleplay/new**. The **team** page is also not seeded
 (needs auth.users rows + a tier upgrade + a teams row).
 
-## ⚠️ These hardcode this session's IDs — not turnkey after a reset
+## Reset-safe (since 2026-07-15)
 
-Both scripts reference fixed UUIDs captured on 2026-07-08:
+The scripts no longer hardcode a user id — they resolve it with
+`(SELECT id FROM auth.users WHERE email = 'test@niles.local')`. The deal UUIDs are
+still fixed, but `00-base-deals.sql` now creates those deals, so a full reseed is
+three commands against a fresh stack.
 
-- user `d4e78b49-0aaa-45ee-a3a4-a4d22b89136b` (`test@niles.local`)
-- deals: Toyota `53a664f3-…`, Petronas `ef6cf521-…`, Grab `043ecb58-…`
+**Only prerequisite:** the test user must exist. Recreate it first via the
+admin-API snippet in `docs/local-dev-setup.md` (a wipe destroys `auth.users`);
+the `handle_new_user` trigger then seeds the profile automatically.
 
-`supabase db reset` wipes `auth.users` and all data, so a fresh stack will have a
-**different** user id and **no** deals — these scripts will then fail on the
-foreign keys. To reuse after a reset you must first recreate the test user (see
-`docs/local-dev-setup.md`) and the three base deals, then update the UUIDs in
-these files to match. Treat this as a *record of the demo dataset*, not a
-one-command reseed.
+### ⚠️ Toyota / Petronas / Grab are a reconstruction
 
-While the DB is merely stopped (`supabase stop`, not reset), the data is
-preserved in the Docker volume and no re-seeding is needed.
+The originals were created through the app UI on 2026-07-08 and existed only in the
+Docker volume — a `supabase stop --no-backup` on 2026-07-15 destroyed them. The
+scripts referenced their UUIDs but never their contents, so the field values in
+`00-base-deals.sql` (value, industry, decision style, health scores, concerns) were
+**inferred** from the surrounding activities/outputs/todos, not recovered. Contacts,
+stages, and Toyota's USD 250,000 are grounded in the seed data; the rest is invented.
+Edit `00-base-deals.sql` if the demo needs specific numbers.
 
 ## Run (against a running local stack)
 
 ```bash
-docker exec -i supabase_db_niles psql -U postgres -d postgres -v ON_ERROR_STOP=1 < scripts/demo-seed/demo-action-plan.sql
-docker exec -i supabase_db_niles psql -U postgres -d postgres -v ON_ERROR_STOP=1 < scripts/demo-seed/seed-demo.sql
+for f in 00-base-deals demo-action-plan seed-demo; do
+  docker exec -i supabase_db_niles psql -U postgres -d postgres -v ON_ERROR_STOP=1 < scripts/demo-seed/$f.sql
+done
 ```
 
 (Note the `-i` — without it the heredoc/stdin is dropped and psql silently no-ops.)

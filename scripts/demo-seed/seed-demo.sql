@@ -1,7 +1,8 @@
 -- ═══════════════════════════════════════════════════════════════════════
 -- Niles demo seed — populates every SEEDABLE product page with realistic
 -- output. Idempotent-ish: run once against the local niles DB.
---   user  U = d4e78b49-0aaa-45ee-a3a4-a4d22b89136b (test@niles.local)
+--   user    = resolved by email (test@niles.local), so this survives a reset
+--   Run scripts/demo-seed/00-base-deals.sql FIRST — it creates the deals below.
 --   Toyota  = 53a664f3-2023-47b3-b327-f9fc3c1c94a7 (Richard Tan, proposal_submission)
 --   Petronas= ef6cf521-b698-4dda-a64d-689b293d619b (Aisyah Rahman, prospecting)
 --   Grab    = 043ecb58-7f9d-4bbf-bb40-67dc5ecafed5 (Wei Jian, closing)
@@ -12,7 +13,7 @@ BEGIN;
 -- ── A. Profile: livelier dashboard + settings ──
 UPDATE public.profiles
 SET full_name = 'Hazman', streak_days = 12, query_count = 47, last_active_at = now()
-WHERE id = 'd4e78b49-0aaa-45ee-a3a4-a4d22b89136b';
+WHERE id = (SELECT id FROM auth.users WHERE email = 'test@niles.local');
 
 -- ── B. Pipeline: add a solution_presentation deal so all 4 columns fill ──
 INSERT INTO public.deals (
@@ -21,7 +22,7 @@ INSERT INTO public.deals (
   key_concerns, health_purpose, health_visioning, health_knowledge, health_kindness,
   health_leadership, health_trust, health_emotional_intel)
 VALUES (
-  'd4e78b49-0aaa-45ee-a3a4-a4d22b89136b',
+  (SELECT id FROM auth.users WHERE email = 'test@niles.local'),
   'Maybank Digital Onboarding', 180000, 'USD', 'solution_presentation',
   'Nurul Izzah', 'Maybank', 'VP Digital Transformation', 'Banking',
   'expressive', 'innovation', 'visual',
@@ -30,51 +31,51 @@ VALUES (
 
 -- ── C. Dashboard: Today's Focus (todos, is_completed=false) ──
 INSERT INTO public.todos (user_id, deal_id, content, priority, is_ai_generated, due_date) VALUES
-  ('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', '53a664f3-2023-47b3-b327-f9fc3c1c94a7',
+  ((SELECT id FROM auth.users WHERE email = 'test@niles.local'), '53a664f3-2023-47b3-b327-f9fc3c1c94a7',
    'Send Richard the phased-rollout SLA + zero-stoppage reference call', 'high', true, current_date),
-  ('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', '043ecb58-7f9d-4bbf-bb40-67dc5ecafed5',
+  ((SELECT id FROM auth.users WHERE email = 'test@niles.local'), '043ecb58-7f9d-4bbf-bb40-67dc5ecafed5',
    'Confirm final pricing sign-off with Wei Jian before Friday', 'high', false, current_date + 2),
-  ('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', 'ef6cf521-b698-4dda-a64d-689b293d619b',
+  ((SELECT id FROM auth.users WHERE email = 'test@niles.local'), 'ef6cf521-b698-4dda-a64d-689b293d619b',
    'Research Aisyah''s sustainability KPIs to anchor the Petronas pitch', 'medium', true, current_date + 1),
-  ('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', NULL,
+  ((SELECT id FROM auth.users WHERE email = 'test@niles.local'), NULL,
    'Re-read Ch.6 (Trust) before the Toyota follow-up', 'grow', true, current_date + 3);
 
 -- ── D. Dashboard: Schedule (calendar_events, TODAY) ──
 INSERT INTO public.calendar_events (user_id, deal_id, title, description, event_type, starts_at, ends_at) VALUES
-  ('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', '53a664f3-2023-47b3-b327-f9fc3c1c94a7',
+  ((SELECT id FROM auth.users WHERE email = 'test@niles.local'), '53a664f3-2023-47b3-b327-f9fc3c1c94a7',
    'Follow-up call — Richard Tan', 'Walk through rollout risk plan', 'call',
    date_trunc('day', now()) + interval '10 hours', date_trunc('day', now()) + interval '10 hours 30 minutes'),
-  ('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', 'ef6cf521-b698-4dda-a64d-689b293d619b',
+  ((SELECT id FROM auth.users WHERE email = 'test@niles.local'), 'ef6cf521-b698-4dda-a64d-689b293d619b',
    'Discovery demo — Petronas', 'First product walkthrough for Aisyah''s team', 'demo',
    date_trunc('day', now()) + interval '14 hours', date_trunc('day', now()) + interval '15 hours'),
-  ('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', NULL,
+  ((SELECT id FROM auth.users WHERE email = 'test@niles.local'), NULL,
    'Pipeline review (self)', 'Weekly self-review of open deals', 'review',
    date_trunc('day', now()) + interval '17 hours', date_trunc('day', now()) + interval '17 hours 30 minutes');
 
 -- ── E. Deal timelines (deal_activities) ──
 -- Toyota — rich history
 INSERT INTO public.deal_activities (deal_id, user_id, activity_type, description, created_at) VALUES
-  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','stage_change','Moved to Proposal Submission', now() - interval '9 days'),
-  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','pre_meeting','Prepped for procurement review with Richard', now() - interval '8 days'),
-  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','note','Richard flagged downtime risk as his #1 concern', now() - interval '7 days'),
-  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','objection_handled','Handled "switching cost too high" objection', now() - interval '5 days'),
-  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','proposal_generated','Proposal generated for Richard Tan', now() - interval '3 days'),
-  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','deck_generated','HTML deck generated for Richard Tan', now() - interval '2 days'),
-  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','debrief','Debriefed the proposal walkthrough call', now() - interval '1 days');
+  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'stage_change','Moved to Proposal Submission', now() - interval '9 days'),
+  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'pre_meeting','Prepped for procurement review with Richard', now() - interval '8 days'),
+  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'note','Richard flagged downtime risk as his #1 concern', now() - interval '7 days'),
+  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'objection_handled','Handled "switching cost too high" objection', now() - interval '5 days'),
+  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'proposal_generated','Proposal generated for Richard Tan', now() - interval '3 days'),
+  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'deck_generated','HTML deck generated for Richard Tan', now() - interval '2 days'),
+  ('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'debrief','Debriefed the proposal walkthrough call', now() - interval '1 days');
 -- Grab — closing
 INSERT INTO public.deal_activities (deal_id, user_id, activity_type, description, created_at) VALUES
-  ('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','stage_change','Moved to Closing', now() - interval '6 days'),
-  ('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','note','Wei Jian verbally committed, pending procurement sign-off', now() - interval '4 days'),
-  ('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','email_sent','Sent final pricing summary email', now() - interval '2 days'),
-  ('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','roleplay_completed','Roleplayed the final negotiation', now() - interval '1 days');
+  ('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'stage_change','Moved to Closing', now() - interval '6 days'),
+  ('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'note','Wei Jian verbally committed, pending procurement sign-off', now() - interval '4 days'),
+  ('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'email_sent','Sent final pricing summary email', now() - interval '2 days'),
+  ('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'roleplay_completed','Roleplayed the final negotiation', now() - interval '1 days');
 -- Petronas — prospecting
 INSERT INTO public.deal_activities (deal_id, user_id, activity_type, description, created_at) VALUES
-  ('ef6cf521-b698-4dda-a64d-689b293d619b','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','note','Intro call booked via referral from KL office', now() - interval '3 days'),
-  ('ef6cf521-b698-4dda-a64d-689b293d619b','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','chat_session','Coached on discovery questions for Aisyah', now() - interval '2 days');
+  ('ef6cf521-b698-4dda-a64d-689b293d619b',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'note','Intro call booked via referral from KL office', now() - interval '3 days'),
+  ('ef6cf521-b698-4dda-a64d-689b293d619b',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'chat_session','Coached on discovery questions for Aisyah', now() - interval '2 days');
 
 -- ── F. Generated Outputs (deal_outputs) — Toyota is the showcase ──
 INSERT INTO public.deal_outputs (deal_id, user_id, output_type, format, title, content) VALUES
-('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','proposal','markdown',
+('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'proposal','markdown',
  'Proposal — Toyota Malaysia',
 $md$# Fleet Renewal Partnership Proposal — Toyota Malaysia
 
@@ -106,7 +107,7 @@ Total programme: **USD 250,000**, structured across the three phases above. Deta
 
 ### Coaching Note
 This proposal leans on **Trust (Ch.6)** — leading with risk-reversal on Richard's stated fear — and **Leadership (Ch.5)**, positioning you as the partner who de-risks his board decision rather than a vendor quoting a price.$md$),
-('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','deck_llm','text',
+('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'deck_llm','text',
  'Deck outline — Toyota Malaysia',
 $txt$Slide 1: A Fleet Renewal With Zero Downtime
 - Toyota Malaysia — Fleet Renewal Partnership
@@ -138,7 +139,7 @@ Slide 6: Next Steps
 - Book the reference call
 - Co-present to your board
 - Speaker note: Offer to stand next to him in the board room.$txt$),
-('53a664f3-2023-47b3-b327-f9fc3c1c94a7','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','deck_html','html',
+('53a664f3-2023-47b3-b327-f9fc3c1c94a7',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'deck_html','html',
  'HTML Deck — Toyota Malaysia',
 $html$<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Toyota Fleet Renewal — Deck</title><style>
 *{margin:0;padding:0;box-sizing:border-box}html,body{height:100%}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0e0d0b;color:#f4efe2;overflow:hidden}
@@ -160,7 +161,7 @@ document.addEventListener('keydown',function(e){if(e.key==='ArrowRight'||e.key==
 </body></html>$html$);
 -- Grab — a proposal so its Outputs card isn't empty
 INSERT INTO public.deal_outputs (deal_id, user_id, output_type, format, title, content) VALUES
-('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5','d4e78b49-0aaa-45ee-a3a4-a4d22b89136b','proposal','markdown',
+('043ecb58-7f9d-4bbf-bb40-67dc5ecafed5',(SELECT id FROM auth.users WHERE email = 'test@niles.local'),'proposal','markdown',
  'Proposal — Grab',
 $md$# Driver Rewards Programme — Grab
 
@@ -186,14 +187,14 @@ Anchored in **Trust (Ch.6)** — you've earned Wei Jian's verbal commitment; kee
 
 -- ── G. Weekly Reviews ──
 INSERT INTO public.weekly_reviews (user_id, week_start, is_read, summary, created_at) VALUES
-('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', date_trunc('week', now())::date, false,
+((SELECT id FROM auth.users WHERE email = 'test@niles.local'), date_trunc('week', now())::date, false,
  '{"deals_moved":2,"deals_stagnant":1,"wins":0,"losses":0,
    "priorities":["Close Grab before Friday — get procurement sign-off","Send Toyota the downtime SLA + reference call","Book the Petronas discovery demo"],
    "blind_spots":["Trust is your lowest principle on 2 of 3 open deals — you move to proposals before earning it","You logged no debrief on the Petronas intro call"],
    "wisdom_quote":"Trust is the currency that closes every deal. Earn it before you ask for the order.",
    "summary_text":"A strong week of forward motion — two deals advanced a stage. Grab is one signature away. The pattern worth watching: you reach the proposal stage fast on knowledge and purpose, but trust lags. Slow down one beat earlier and let the relationship carry the close."}'::jsonb,
  now() - interval '1 hour'),
-('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', (date_trunc('week', now()) - interval '7 days')::date, true,
+((SELECT id FROM auth.users WHERE email = 'test@niles.local'), (date_trunc('week', now()) - interval '7 days')::date, true,
  '{"deals_moved":1,"deals_stagnant":2,"wins":1,"losses":0,
    "priorities":["Advance Toyota to proposal","Re-engage two stalled deals"],
    "blind_spots":["Follow-up cadence slipped mid-week"],
@@ -204,7 +205,7 @@ INSERT INTO public.weekly_reviews (user_id, week_start, is_read, summary, create
 -- ── H. Roleplay transcript (roleplay/[sessionId]) ──
 WITH rp AS (
   INSERT INTO public.chat_sessions (user_id, deal_id, session_type, title, score, principle_tags, created_at)
-  VALUES ('d4e78b49-0aaa-45ee-a3a4-a4d22b89136b', NULL, 'roleplay',
+  VALUES ((SELECT id FROM auth.users WHERE email = 'test@niles.local'), NULL, 'roleplay',
           'Roleplay — Skeptical Procurement Buyer', 78, ARRAY['trust','emotional'], now() - interval '1 days')
   RETURNING id)
 INSERT INTO public.chat_messages (session_id, role, content, created_at)

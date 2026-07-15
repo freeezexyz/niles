@@ -24,9 +24,23 @@ local Supabase stack (recreate it if you point `.env.local` at the cloud project
 |---|---|
 | App (Next dev) | http://localhost:3000 |
 | Supabase API | http://127.0.0.1:54321 |
-| Supabase Studio (browse DB/users) | http://localhost:54323 |
 | Mailpit (catches outgoing email) | http://localhost:54324 |
 | Postgres | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
+
+### Trimmed local stack (8GB machines)
+
+`analytics`, `realtime`, and `studio` are `enabled = false` in `supabase/config.toml`. The
+full stack does not fit in Docker Desktop's 4GB VM — `analytics` (logflare) and `studio`
+fail their healthchecks, and the CLI tears down the *whole* stack when any container is
+unhealthy. Nothing in `src/` uses realtime, and the app never talks to studio.
+
+Studio being off means no DB browser GUI. Inspect data with psql instead:
+
+```bash
+docker exec -it supabase_db_niles psql -U postgres        # or: psql "$DB_URL"
+```
+
+Re-enable any of them in `config.toml` if you raise Docker's memory allocation.
 
 ## Local Supabase keys (in `.env.local`)
 
