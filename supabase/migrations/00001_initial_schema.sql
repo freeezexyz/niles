@@ -371,3 +371,27 @@ CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.deals
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.chat_sessions
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Grants
+--
+-- Do NOT rely on Supabase's implicit default privileges here. For tables created
+-- by the `postgres` role (which is what applies this migration), the current
+-- Supabase postgres image defaults `anon`/`authenticated`/`service_role` to only
+-- Dxtm (TRUNCATE/REFERENCES/TRIGGER/MAINTAIN) in `public` — no SELECT/INSERT/
+-- UPDATE/DELETE. Without the grants below, PostgREST returns
+-- `42501 permission denied for table ...` and the app reads nothing.
+--
+-- RLS is enabled on every table above and is what actually restricts rows;
+-- these grants only open the table-level gate. `anon` is intentionally omitted:
+-- every policy is auth.uid()-based, so anonymous clients need no table access.
+-- `service_role` bypasses RLS but still requires table-level grants.
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO service_role;
