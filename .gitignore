@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# database dumps — contain real production data, never commit (repo is public)
+/backups/
+*.dump
+prod-*.sql
+
 # vercel
 .vercel
 
