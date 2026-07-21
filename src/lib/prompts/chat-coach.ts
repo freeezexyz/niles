@@ -1,36 +1,35 @@
 import type { BookChunk } from "@/lib/pinecone/query";
 import { formatBookContext } from "@/lib/pinecone/query";
-import type { Client, Deal } from "@/lib/types";
+import type { Deal } from "@/lib/types";
 
 interface ChatCoachPromptOptions {
   bookContext: BookChunk[];
-  clientDna?: Client | null;
   dealContext?: Deal | null;
 }
 
 export function buildChatCoachPrompt({
   bookContext,
-  clientDna,
   dealContext,
 }: ChatCoachPromptOptions): string {
   const bookSection = formatBookContext(bookContext);
 
-  let clientSection = "";
-  if (clientDna) {
-    clientSection = `
-CLIENT DNA PROFILE:
-- Name: ${clientDna.name}${clientDna.company ? ` (${clientDna.company})` : ""}
-- Decision Style: ${clientDna.decision_style || "Unknown"}
-- Primary Motivation: ${clientDna.primary_motivation?.replace(/_/g, " ") || "Unknown"}
-- Communication Preference: ${clientDna.communication_pref?.replace(/_/g, " ") || "Unknown"}
-- Key Concerns: ${clientDna.key_concerns || "Not provided"}
-- Strongest Principles: ${getStrongestPrinciples(clientDna)}
-`;
-  }
+  const coachingMode = dealContext
+    ? `COACHING MODE: DEAL-SPECIFIC — you are coaching on the deal detailed below, and you can see its full conversation history. Be proactive: lead with what most needs attention on THIS deal (often its weakest principle) and tie it to a concrete next move. Reference the contact and stage specifically.`
+    : `COACHING MODE: GENERAL — no specific deal is attached. Coach broadly on the rep's craft, and proactively offer to go deeper on one of their live deals when it would help.`;
 
   let dealSection = "";
   if (dealContext) {
     dealSection = `
+DEAL CONTACT:
+- Name: ${dealContext.contact_name || "Unknown"}${dealContext.contact_company ? ` (${dealContext.contact_company})` : ""}
+- Role: ${dealContext.contact_role || "Unknown"}
+- Industry: ${dealContext.industry || "Unknown"}
+- Decision Style: ${dealContext.decision_style || "Unknown"}
+- Primary Motivation: ${dealContext.primary_motivation?.replace(/_/g, " ") || "Unknown"}
+- Communication Preference: ${dealContext.communication_pref?.replace(/_/g, " ") || "Unknown"}
+- Key Concerns: ${dealContext.key_concerns || "Not provided"}
+- Emotional Triggers: ${dealContext.emotional_triggers || "Not provided"}
+
 CURRENT DEAL CONTEXT:
 - Deal: ${dealContext.title}
 - Stage: ${dealContext.stage.replace(/_/g, " ")}
@@ -51,13 +50,16 @@ You coach salespeople using the 7 Pharaoh principles:
 6. Trust (Ch.6) — Trust is the currency that closes every deal
 7. Emotional Intelligence (Ch.7) — Read the room, feel the moment, win the relationship
 
+${coachingMode}
+
 CONTEXT FROM THE BOOK:
 ${bookSection || "No specific book passages retrieved for this query."}
-${clientSection}${dealSection}
+${dealSection}
 RULES:
 - Always cite the specific Pharaoh principle and chapter that grounds your advice (e.g. "Ch.6 — Trust")
-- If client DNA is available, adapt your advice to their decision style and motivations
+- If deal contact context is available, adapt your advice to their decision style and motivations
 - Be specific and actionable — give the salesperson something they can do or say TODAY
+- Be proactive: if you lack the context to give your best advice, ask ONE sharp probing question rather than guessing. When coaching on a deal, surface risks the rep hasn't mentioned.
 - Never give generic sales advice. Ground everything in the book's philosophy
 - Use a warm, confident, mentoring tone — like a wise advisor who has seen a thousand deals
 - Open with the client's situation, not the product
@@ -71,23 +73,6 @@ RESPONSE FORMAT:
   [PRINCIPLE: principle_name | CH.N]
   Where principle_name is one of: purpose, visioning, knowledge, kindness, leadership, trust, emotional
   And N is the chapter number (1-7)`;
-}
-
-function getStrongestPrinciples(client: Client): string {
-  const scores = [
-    { name: "Purpose", score: client.p_purpose },
-    { name: "Visioning", score: client.p_visioning },
-    { name: "Knowledge", score: client.p_knowledge },
-    { name: "Kindness", score: client.p_kindness },
-    { name: "Leadership", score: client.p_leadership },
-    { name: "Trust", score: client.p_trust },
-    { name: "Emotional Intel", score: client.p_emotional_intel },
-  ];
-  return scores
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-    .map((s) => `${s.name} (${s.score})`)
-    .join(", ");
 }
 
 function getWeakestPrinciple(deal: Deal): string {

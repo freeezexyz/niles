@@ -26,8 +26,8 @@ export function DealCard({ deal }: DealCardProps) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const clientName = deal.client?.name;
-  const clientCompany = deal.client?.company;
+  const clientName = deal.contact_name;
+  const clientCompany = deal.contact_company;
 
   return (
     <div

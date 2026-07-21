@@ -1,9 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import { CoachGreeting } from "@/components/dashboard/CoachGreeting";
+import { RepDevelopmentCard } from "@/components/dashboard/RepDevelopmentCard";
+import { DealHealthOverview } from "@/components/dashboard/DealHealthOverview";
 import { TodoList } from "@/components/dashboard/TodoList";
 import { CalendarDay } from "@/components/dashboard/CalendarDay";
-import { WisdomCard } from "@/components/dashboard/WisdomCard";
 import { StreakCounter } from "@/components/dashboard/StreakCounter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { repRowToScores } from "@/lib/rep-score";
+import type { Deal } from "@/lib/types";
 import { format } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -14,15 +18,23 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profile } = user
-    ? await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single()
-    : { data: null };
+  const [{ data: profile }, { data: deals }, { data: repScore }] = user
+    ? await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
+        supabase.from("deals").select("*").eq("user_id", user.id),
+        supabase
+          .from("rep_principle_scores")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }, { data: null }];
 
   const today = format(new Date(), "EEEE, MMMM d");
+  const firstName = profile?.full_name?.split(" ")[0] ?? null;
+  const repScores = repScore ? repRowToScores(repScore) : null;
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -34,15 +46,46 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             {today}
-            {profile?.full_name ? ` \u2014 Welcome back, ${profile.full_name}` : ""}
+            {firstName ? ` — Welcome back, ${firstName}` : ""}
           </p>
         </div>
         {profile && <StreakCounter days={profile.streak_days} />}
       </div>
 
-      {/* Three-column grid */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Today's Focus */}
+      {/* Proactive coach hero */}
+      <CoachGreeting firstName={firstName} />
+
+      {/* Rep development + deal health */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-sm font-display">
+              Your Development
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {repScores ? (
+              <RepDevelopmentCard scores={repScores} />
+            ) : (
+              <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+                Your development score will appear as you coach with Niles.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-sm font-display">Deal Health</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DealHealthOverview deals={(deals as Deal[]) || []} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Today's focus + schedule */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="text-sm font-display">
@@ -54,25 +97,12 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Schedule */}
         <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="text-sm font-display">Schedule</CardTitle>
           </CardHeader>
           <CardContent>
             <CalendarDay />
-          </CardContent>
-        </Card>
-
-        {/* Pharaoh's Wisdom */}
-        <Card className="border-border bg-card glow-gold">
-          <CardHeader>
-            <CardTitle className="text-sm font-display text-gradient-gold">
-              Pharaoh&apos;s Wisdom
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <WisdomCard />
           </CardContent>
         </Card>
       </div>

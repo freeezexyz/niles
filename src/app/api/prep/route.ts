@@ -16,26 +16,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { meetingGoal, lastInteraction, dealId, clientId } = await req.json();
+  const { meetingGoal, lastInteraction, dealId } = await req.json();
 
   if (!meetingGoal?.trim()) {
     return NextResponse.json({ error: "Meeting goal is required" }, { status: 400 });
   }
 
   // Get context
-  let client = null;
   let deal = null;
-  if (clientId) {
-    const { data } = await supabase.from("clients").select("*").eq("id", clientId).single();
-    client = data;
-  }
   if (dealId) {
     const { data } = await supabase.from("deals").select("*").eq("id", dealId).single();
     deal = data;
   }
 
   const bookContext = await queryPinecone(meetingGoal, { topK: 5 });
-  const prompt = buildPreMeetingPrepPrompt({ meetingGoal, lastInteraction, bookContext, client, deal });
+  const prompt = buildPreMeetingPrepPrompt({ meetingGoal, lastInteraction, bookContext, deal });
 
   const anthropic = getAnthropicClient();
   const response = await anthropic.messages.create({
@@ -52,7 +47,6 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       deal_id: dealId || null,
-      client_id: clientId || null,
       session_type: "pre_meeting",
       title: `Pre-Meeting: ${meetingGoal.slice(0, 60)}`,
     })

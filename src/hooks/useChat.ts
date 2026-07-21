@@ -7,14 +7,12 @@ import type { PrincipleKey } from "@/lib/utils/principles";
 interface UseChatOptions {
   sessionId?: string | null;
   dealId?: string | null;
-  clientId?: string | null;
   onSessionCreated?: (sessionId: string) => void;
 }
 
 export function useChat({
   sessionId,
   dealId,
-  clientId,
   onSessionCreated,
 }: UseChatOptions = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,7 +52,6 @@ export function useChat({
             sessionId: currentSessionId,
             message: content,
             dealId,
-            clientId,
           }),
         });
 
@@ -170,7 +167,7 @@ export function useChat({
         setIsStreaming(false);
       }
     },
-    [currentSessionId, dealId, clientId, onSessionCreated]
+    [currentSessionId, dealId, onSessionCreated]
   );
 
   const loadHistory = useCallback((existingMessages: Message[]) => {

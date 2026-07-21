@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   Kanban,
-  Users,
   Settings,
 } from "lucide-react";
 
@@ -15,7 +14,6 @@ const mobileItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/chat", label: "Coach", icon: MessageSquare },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
-  { href: "/clients", label: "Clients", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

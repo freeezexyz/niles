@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { sessionId, message, dealId, clientId } = await req.json();
+  const { sessionId, message, dealId } = await req.json();
 
   if (!message?.trim()) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -71,7 +71,6 @@ export async function POST(req: Request) {
             .insert({
               user_id: user.id,
               deal_id: dealId || null,
-              client_id: clientId || null,
               session_type: "chat",
               title: message.slice(0, 80),
             })
@@ -127,17 +126,6 @@ export async function POST(req: Request) {
         // Get RAG context
         const bookContext = await queryPinecone(message, { topK: 5 });
 
-        // Get client DNA if provided
-        let clientDna = null;
-        if (clientId) {
-          const { data } = await supabase
-            .from("clients")
-            .select("*")
-            .eq("id", clientId)
-            .single();
-          clientDna = data;
-        }
-
         // Get deal context if provided
         let dealContext = null;
         if (dealId) {
@@ -152,7 +140,6 @@ export async function POST(req: Request) {
         // Build system prompt
         const systemPrompt = buildChatCoachPrompt({
           bookContext,
-          clientDna,
           dealContext,
         });
 

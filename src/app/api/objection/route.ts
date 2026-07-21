@@ -16,20 +16,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { objection, clientId, dealId } = await req.json();
+  const { objection, dealId } = await req.json();
 
   if (!objection?.trim()) {
     return NextResponse.json({ error: "Objection text is required" }, { status: 400 });
   }
 
-  let client = null;
-  if (clientId) {
-    const { data } = await supabase.from("clients").select("*").eq("id", clientId).single();
-    client = data;
+  let deal = null;
+  if (dealId) {
+    const { data } = await supabase.from("deals").select("*").eq("id", dealId).single();
+    deal = data;
   }
 
   const bookContext = await queryPinecone(objection, { topK: 5 });
-  const prompt = buildObjectionHandlerPrompt({ objection, bookContext, client });
+  const prompt = buildObjectionHandlerPrompt({ objection, bookContext, deal });
 
   const anthropic = getAnthropicClient();
   const response = await anthropic.messages.create({
@@ -46,7 +46,6 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       deal_id: dealId || null,
-      client_id: clientId || null,
       session_type: "objection",
       title: `Objection: ${objection.slice(0, 60)}`,
     })

@@ -15,24 +15,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { debriefNotes, dealId, clientId } = await req.json();
+  const { debriefNotes, dealId } = await req.json();
 
   if (!debriefNotes?.trim()) {
     return NextResponse.json({ error: "Debrief notes are required" }, { status: 400 });
   }
 
-  let client = null;
   let deal = null;
-  if (clientId) {
-    const { data } = await supabase.from("clients").select("*").eq("id", clientId).single();
-    client = data;
-  }
   if (dealId) {
     const { data } = await supabase.from("deals").select("*").eq("id", dealId).single();
     deal = data;
   }
 
-  const prompt = buildPostCallDebriefPrompt({ debriefNotes, client, deal });
+  const prompt = buildPostCallDebriefPrompt({ debriefNotes, deal });
   const anthropic = getAnthropicClient();
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -48,7 +43,6 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       deal_id: dealId || null,
-      client_id: clientId || null,
       session_type: "debrief",
       title: `Debrief: ${debriefNotes.slice(0, 60)}`,
     })

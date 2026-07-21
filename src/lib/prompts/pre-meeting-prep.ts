@@ -1,4 +1,4 @@
-import type { Client, Deal } from "@/lib/types";
+import type { Deal } from "@/lib/types";
 import type { BookChunk } from "@/lib/pinecone/query";
 import { formatBookContext } from "@/lib/pinecone/query";
 
@@ -6,7 +6,6 @@ interface PrepPromptOptions {
   meetingGoal: string;
   lastInteraction: string;
   bookContext: BookChunk[];
-  client?: Client | null;
   deal?: Deal | null;
 }
 
@@ -14,7 +13,6 @@ export function buildPreMeetingPrepPrompt({
   meetingGoal,
   lastInteraction,
   bookContext,
-  client,
   deal,
 }: PrepPromptOptions): string {
   const bookSection = formatBookContext(bookContext);
@@ -26,14 +24,15 @@ Generate a principle-mapped meeting strategy for the upcoming meeting.
 MEETING GOAL: ${meetingGoal}
 LAST INTERACTION NOTES: ${lastInteraction || "None provided"}
 
-${client ? `CLIENT DNA:
-- Name: ${client.name} (${client.company || "Unknown company"})
-- Decision Style: ${client.decision_style || "Unknown"}
-- Primary Motivation: ${client.primary_motivation?.replace(/_/g, " ") || "Unknown"}
-- Communication Preference: ${client.communication_pref?.replace(/_/g, " ") || "Unknown"}
-- Key Concerns: ${client.key_concerns || "Not provided"}` : ""}
+${deal ? `DEAL CONTACT:
+- Name: ${deal.contact_name || "Unknown"} (${deal.contact_company || "Unknown company"})
+- Role: ${deal.contact_role || "Unknown"}
+- Decision Style: ${deal.decision_style || "Unknown"}
+- Primary Motivation: ${deal.primary_motivation?.replace(/_/g, " ") || "Unknown"}
+- Communication Preference: ${deal.communication_pref?.replace(/_/g, " ") || "Unknown"}
+- Key Concerns: ${deal.key_concerns || "Not provided"}
 
-${deal ? `DEAL CONTEXT:
+DEAL CONTEXT:
 - Deal: ${deal.title}
 - Stage: ${deal.stage.replace(/_/g, " ")}
 - Health Score: ${deal.health_overall}/100` : ""}

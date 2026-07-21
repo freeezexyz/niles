@@ -1,14 +1,12 @@
-import type { Client, Deal } from "@/lib/types";
+import type { Deal } from "@/lib/types";
 
 interface DebriefPromptOptions {
   debriefNotes: string;
-  client?: Client | null;
   deal?: Deal | null;
 }
 
 export function buildPostCallDebriefPrompt({
   debriefNotes,
-  client,
   deal,
 }: DebriefPromptOptions): string {
   return `You are Niles, an AI sales coach powered by "The Pharaoh's Pitch" by Ivan Yong.
@@ -18,7 +16,7 @@ Analyze the following post-call debrief notes and provide coaching feedback.
 DEBRIEF NOTES:
 ${debriefNotes}
 
-${client ? `CLIENT: ${client.name} (${client.company || ""}) — ${client.decision_style || "unknown"} decision style` : ""}
+${deal ? `DEAL CONTACT: ${deal.contact_name || "Unknown"} (${deal.contact_company || ""}) — ${deal.decision_style || "unknown"} decision style` : ""}
 ${deal ? `DEAL: ${deal.title} — ${deal.stage.replace(/_/g, " ")} stage — Health: ${deal.health_overall}/100` : ""}
 
 Provide your analysis in this structure:

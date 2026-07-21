@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from("deals")
-    .select("*, client:clients(id, name, company)")
+    .select("*")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   const { data, error } = await supabase
     .from("deals")
     .insert({ ...body, user_id: user.id })
-    .select("*, client:clients(id, name, company)")
+    .select("*")
     .single();
 
   if (error) {

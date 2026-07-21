@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { RadarChart } from "@/components/deals/RadarChart";
 import { HealthAlert } from "@/components/deals/HealthAlert";
 import { DealActivityLog } from "@/components/deals/DealActivityLog";
+import { DealOutputs } from "@/components/deals/DealOutputs";
 import { HealthBar } from "@/components/shared/HealthBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,9 +16,8 @@ import type { Deal, DealActivity } from "@/lib/types";
 
 const stageLabels: Record<string, string> = {
   prospecting: "Prospecting",
-  vision_aligned: "Vision Aligned",
-  trust_building: "Trust Building",
-  leadership_phase: "Leadership Phase",
+  solution_presentation: "Solution Presentation",
+  proposal_submission: "Proposal Submission",
   closing: "Closing",
   won: "Won",
   lost: "Lost",
@@ -37,7 +37,7 @@ export default function DealDetailPage({
     const supabase = createClient();
     const { data } = await supabase
       .from("deals")
-      .select("*, client:clients(id, name, company)")
+      .select("*")
       .eq("id", dealId)
       .single();
     setDeal(data);
@@ -105,13 +105,11 @@ export default function DealDetailPage({
                 {deal.currency} {Number(deal.value).toLocaleString()}
               </span>
             )}
-            {deal.client && (
-              <Link
-                href={`/clients/${deal.client.id}`}
-                className="text-sm text-gold-500 hover:text-gold-400"
-              >
-                {deal.client.name}
-              </Link>
+            {deal.contact_name && (
+              <span className="text-sm text-[var(--text-secondary)]">
+                {deal.contact_name}
+                {deal.contact_company && ` — ${deal.contact_company}`}
+              </span>
             )}
           </div>
         </div>
@@ -155,7 +153,18 @@ export default function DealDetailPage({
             </span>
           </CardHeader>
           <CardContent>
-            <RadarChart deal={deal} />
+            <RadarChart
+              label="Health"
+              scores={{
+                purpose: deal.health_purpose,
+                visioning: deal.health_visioning,
+                knowledge: deal.health_knowledge,
+                kindness: deal.health_kindness,
+                leadership: deal.health_leadership,
+                trust: deal.health_trust,
+                emotional: deal.health_emotional_intel,
+              }}
+            />
           </CardContent>
         </Card>
 
@@ -203,6 +212,9 @@ export default function DealDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Generated Outputs (proposal + deck) */}
+      <DealOutputs dealId={dealId} onChange={loadActivities} />
 
       {/* Activity Log */}
       <Card className="border-border bg-card">

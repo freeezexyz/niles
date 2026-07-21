@@ -8,21 +8,33 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from "recharts";
-import type { Deal } from "@/lib/types";
 
-interface RadarChartProps {
-  deal: Deal;
+// The 7 Pharaoh principles, keyed the same way everywhere (see principles.ts).
+export interface PrincipleScores {
+  purpose: number;
+  visioning: number;
+  knowledge: number;
+  kindness: number;
+  leadership: number;
+  trust: number;
+  emotional: number;
 }
 
-export function RadarChart({ deal }: RadarChartProps) {
+interface RadarChartProps {
+  scores: PrincipleScores;
+  /** Series name shown in tooltips/legend (e.g. "Health", "Development"). */
+  label?: string;
+}
+
+export function RadarChart({ scores, label = "Score" }: RadarChartProps) {
   const data = [
-    { principle: "Purpose", score: deal.health_purpose, fullMark: 100 },
-    { principle: "Visioning", score: deal.health_visioning, fullMark: 100 },
-    { principle: "Knowledge", score: deal.health_knowledge, fullMark: 100 },
-    { principle: "Kindness", score: deal.health_kindness, fullMark: 100 },
-    { principle: "Leadership", score: deal.health_leadership, fullMark: 100 },
-    { principle: "Trust", score: deal.health_trust, fullMark: 100 },
-    { principle: "EQ", score: deal.health_emotional_intel, fullMark: 100 },
+    { principle: "Purpose", score: scores.purpose, fullMark: 100 },
+    { principle: "Visioning", score: scores.visioning, fullMark: 100 },
+    { principle: "Knowledge", score: scores.knowledge, fullMark: 100 },
+    { principle: "Kindness", score: scores.kindness, fullMark: 100 },
+    { principle: "Leadership", score: scores.leadership, fullMark: 100 },
+    { principle: "Trust", score: scores.trust, fullMark: 100 },
+    { principle: "EQ", score: scores.emotional, fullMark: 100 },
   ];
 
   return (
@@ -40,7 +52,7 @@ export function RadarChart({ deal }: RadarChartProps) {
           axisLine={false}
         />
         <Radar
-          name="Health"
+          name={label}
           dataKey="score"
           stroke="#F59E0B"
           fill="#F59E0B"

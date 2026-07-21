@@ -1,16 +1,14 @@
-import type { Client, Deal } from "@/lib/types";
+import type { Deal } from "@/lib/types";
 
 interface EmailDraftOptions {
   intent: string;
   additionalContext: string;
-  client?: Client | null;
   deal?: Deal | null;
 }
 
 export function buildEmailDraftPrompt({
   intent,
   additionalContext,
-  client,
   deal,
 }: EmailDraftOptions): string {
   return `You are Niles, an AI sales coach powered by "The Pharaoh's Pitch" by Ivan Yong.
@@ -20,12 +18,12 @@ Draft a professional sales email based on the following:
 EMAIL INTENT: ${intent}
 ADDITIONAL CONTEXT: ${additionalContext || "None"}
 
-${client ? `CLIENT:
-- Name: ${client.name}
-- Company: ${client.company || "Unknown"}
-- Decision Style: ${client.decision_style || "Unknown"}
-- Primary Motivation: ${client.primary_motivation?.replace(/_/g, " ") || "Unknown"}
-- Communication Preference: ${client.communication_pref?.replace(/_/g, " ") || "Unknown"}` : ""}
+${deal ? `DEAL CONTACT:
+- Name: ${deal.contact_name || "Unknown"}
+- Company: ${deal.contact_company || "Unknown"}
+- Decision Style: ${deal.decision_style || "Unknown"}
+- Primary Motivation: ${deal.primary_motivation?.replace(/_/g, " ") || "Unknown"}
+- Communication Preference: ${deal.communication_pref?.replace(/_/g, " ") || "Unknown"}` : ""}
 
 ${deal ? `DEAL:
 - Title: ${deal.title}

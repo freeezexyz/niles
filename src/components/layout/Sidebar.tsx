@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   Kanban,
-  Users,
   Target,
   Swords,
   Mail,
@@ -26,7 +25,6 @@ const mainNav = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/chat", label: "AI Coach", icon: MessageSquare },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
-  { href: "/clients", label: "Clients", icon: Users },
 ];
 
 const toolsNav = [
